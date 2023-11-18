@@ -1,5 +1,5 @@
 #' Convert lat long vectors to data frame
-#' 
+#'
 #' Some of the googleway functions takes location as vector and others as data
 #' frame. this function helps converting from vector to list
 #'

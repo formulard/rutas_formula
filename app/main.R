@@ -64,7 +64,7 @@ ui <- function(id) {
         "Tipo de vehículo",
         choices = vehiculos$vehiculo
       ),
-      shiny$actionButton(ns("compute"), "Estimar ruta", class = "primary")
+      shiny$actionButton(ns("compute"), "Estimar ruta", class = "danger")
     ),
     bslib$layout_columns(
       bslib$value_box(
@@ -106,18 +106,18 @@ ui <- function(id) {
 server <- function(id) {
   shiny$moduleServer(id, function(input, output, session) {
     ns <- shiny$NS(id)
-    
+
     shiny$observeEvent(c(input$origen, input$destino), {
       filtered <- centros_comerciales |>
         dplyr::filter(!name %in% c(input$origen, input$destino))
-      
+
       shinyWidgets::updatePickerInput(
         session,
         "paradas",
         choices = filtered$name,
       )
     })
-    
+
     output$map <- googleway::renderGoogle_map({
       googleway::google_map(
         key = map_key,
@@ -125,20 +125,20 @@ server <- function(id) {
         zoom = 10, map_type_control = FALSE
       )
     })
-    
+
     selected_places <- shiny$eventReactive(input$compute, {
       index_destinos <- which(
         centros_comerciales$name %in% c(input$origen, input$paradas, input$destino)
         )
       centros_comerciales[index_destinos, ]
     })
-    
+
     routes <- shiny$eventReactive(selected_places(), {
       selected_places() |>
-        dplyr::bind_rows(dplyr::slice(selected_places(), 1)) |> 
+        dplyr::bind_rows(dplyr::slice(selected_places(), 1)) |>
         mutate(
           destination = lag(location, default = NA)
-        ) |> 
+        ) |>
         slice(-1) |>
         mutate(
           polyline = map2_chr(
@@ -152,21 +152,21 @@ server <- function(id) {
             \(origen, destino) {
               origen <- location_vector_to_df(origen)
               destino <- location_vector_to_df(destino)
-              
+
               places$fetch_distance_and_duration(origen, destino)
             }
           )
         ) |>
         unnest(distance_duration)
     }, ignoreNULL = TRUE)
-    
+
     parametros <- shiny$reactive({
       shiny$req(routes(), selected_places())
       calcular_indicadores(routes(), input$vehiculo, input$paradas)
     })
-    
+
     shiny$observeEvent(routes(), {
-      
+
       googleway::google_map_update(ns("map")) |>
         googleway::clear_polylines() |>
         googleway::clear_markers() |>
@@ -177,7 +177,7 @@ server <- function(id) {
           stroke_weight = 5
         )
     }, ignoreNULL = TRUE)
-    
+
     output$distancia <- shiny$renderText({
       shiny$req(parametros())
       scales::comma(parametros()$distancia / 1000, accuracy = 0.1)
@@ -187,7 +187,7 @@ server <- function(id) {
       shiny$req(parametros())
       as.character(parametros()$tiempo)
     })
-    
+
     output$paradas <- shiny$renderText({
       shiny$req(parametros())
       length(input$paradas)
@@ -198,12 +198,11 @@ server <- function(id) {
       parametros()$galones |>
         round(1)
     })
-    
-    output$tarifa <-shiny$renderText({
+
+    output$tarifa <- shiny$renderText({
       shiny$req(parametros())
       parametros()$tarifa |>
         scales::comma(prefix = "RD$ ")
     })
-    
   })
 }

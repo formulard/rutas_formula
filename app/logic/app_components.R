@@ -41,4 +41,3 @@ two_columns <- function(col1, col2, widths = c(6, 6), breakpoint = "lg") {
     )
   )
 }
-

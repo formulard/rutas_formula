@@ -25,7 +25,7 @@ location_vector_to_df <- function(location) {
 rutas <- centros_comerciales |>
   mutate(
     destination = lag(location, default = NA)
-  ) |> 
+  ) |>
   slice(-1) |>
   mutate(
     polyline = map2_chr(
@@ -39,32 +39,19 @@ rutas <- centros_comerciales |>
       \(origen, destino) {
         origen <- location_vector_to_df(origen)
         destino <- location_vector_to_df(destino)
-        
+
         places$fetch_distance_and_duration(origen, destino)
       }
     )
   ) |>
   tidyr::unnest(distance_duration)
 
-
 calcular_indicadores(rutas, "Camioneta", paradas = c("Megacentro"))
 
 google_map(key = map_key) %>%
-  #add_traffic() |> 
   add_polylines(
     data = select(rutas, polyline),
     polyline = "polyline",
     stroke_weight = 5
   ) |>
   add_markers(data = centros_comerciales)
-
-
-# get_route <- function(destinations) {
-#     polyline <- google_directions(
-#       origin = origin$location,
-#       destination = destination$location
-#     ) |>
-#       direction_polyline()
-# }
-
-
