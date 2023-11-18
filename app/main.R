@@ -3,7 +3,14 @@ box::use(
   bslib,
   shinyWidgets[pickerInput],
   googleway,
-  bsicons[bs_icon]
+  bsicons[bs_icon],
+  dplyr[mutate, as_tibble, slice, lag, select],
+  purrr[map2, map2_chr],
+  tidyr[unnest],
+  googleway[
+    google_directions,
+    direction_polyline
+  ]
 )
 
 map_key <- Sys.getenv("API_KEY")
@@ -11,12 +18,14 @@ map_key <- Sys.getenv("API_KEY")
 box::use(
   app/logic/app_components[header],
   app/logic/places,
-  app/logic/places_helpers
+  app/logic/places_helpers[location_vector_to_df]
 )
 
 centros_comerciales <- readRDS("app/data/centros_comerciales.rds") |>
   mutate(location = map2(lat, lng, ~c(.x, .y))) |>
   as_tibble()
+
+vehiculos <- readRDS("app/data/vehiculos.rds")
 
 #' @export
 ui <- function(id) {
@@ -50,41 +59,38 @@ ui <- function(id) {
         options = list(`selected-text-format` = "count > 1")
       ),
       shiny$selectInput(
-        ns("tipo_vehiculo"),
+        ns("vehiculo"),
         "Tipo de vehículo",
-        choices = c(
-          "Camioneta",
-          "Cambión pequeño",
-          "Caminón de 3 ejes",
-          "Caminón de 5 ejes"
-        ) 
+        choices = vehiculos$vehiculo
       ),
       shiny$actionButton(ns("compute"), "Estimar ruta", class = "primary")
     ),
     bslib$layout_columns(
       bslib$value_box(
         title = "Tarifa estimada",
-        value = shiny$textOutput("tarifa"),
+        value = shiny$textOutput(ns("tarifa")),
         showcase = bs_icon("cash-stack")
       ),
       bslib$value_box(
         title = "Distancia",
-        value = shiny$textOutput("distancia"),
+        value = shiny$textOutput(ns("distancia")),
         showcase = bs_icon("Speedometer2")
       ),
       bslib$value_box(
         title = "Tiempo de conducción",
-        value = shiny$textOutput("tiempo"),
+        value = shiny$textOutput(ns("tiempo")),
         showcase = bs_icon("stopwatch")
       ),
       bslib$value_box(
         title = "Paradas",
-        value = shiny$textOutput("paradas"),
+        value = shiny$textOutput(ns("paradas")),
         showcase = bs_icon("sign-stop")
       ),
       bslib$value_box(
         title = "Combustible",
-        value = shiny$textOutput("combustible"), showcase = bs_icon("fuel-pump")),
+        value = shiny$textOutput(ns("combustible")),
+        showcase = bs_icon("fuel-pump")
+      ),
       fill = FALSE,
       height = "100px"
     ),
@@ -98,7 +104,8 @@ ui <- function(id) {
 #' @export
 server <- function(id) {
   shiny$moduleServer(id, function(input, output, session) {
-    paradas_intermedias <- shiny$reactiveVal()
+    ns <- shiny$NS(id)
+    
     shiny$observeEvent(c(input$origen, input$destino), {
       filtered <- centros_comerciales |>
         dplyr::filter(!name %in% c(input$origen, input$destino))
@@ -117,13 +124,111 @@ server <- function(id) {
         zoom = 10, map_type_control = FALSE
       )
     })
-    routes <- shiny$eventReactive(input$compute, {
-      index_destinos <- which(centros_comerciales %in% c(input$origen, input$paradas, input$destino))
-      selected <- centros_comerciales[destinos, index_destinos]
-      
-      selected 
-    )
     
+    selected_places <- shiny$eventReactive(input$compute, {
+      index_destinos <- which(
+        centros_comerciales$name %in% c(input$origen, input$paradas, input$destino)
+        )
+      centros_comerciales[index_destinos, ]
     })
+    
+    routes <- shiny$eventReactive(selected_places(), {
+      selected_places() |>
+        dplyr::bind_rows(dplyr::slice(selected_places(), 1)) |> 
+        mutate(
+          destination = lag(location, default = NA)
+        ) |> 
+        slice(-1) |>
+        mutate(
+          polyline = map2_chr(
+            location,
+            destination,
+            ~google_directions(.x, .y, key = map_key) |> direction_polyline()
+          ),
+          distance_duration = map2(
+            location,
+            destination,
+            \(origen, destino) {
+              origen <- location_vector_to_df(origen)
+              destino <- location_vector_to_df(destino)
+              
+              places$fetch_distance_and_duration(origen, destino)
+            }
+          )
+        ) |>
+        unnest(distance_duration)
+    }, ignoreNULL = TRUE)
+    
+    parametros <- shiny$reactive({
+      shiny$req(routes(), selected_places())
+      
+      distancia <- routes() |>
+        dplyr::pull(distance_metters) |>
+        sum()
+      
+      tiempo <- routes() |>
+        dplyr::pull(time_secons) |>
+        sum() |>
+        lubridate::seconds_to_period()
+      
+      paradas <- length(input$paradas)
+      
+      by_vehiculo <- vehiculos |>
+        dplyr::filter(vehiculo == input$vehiculo) |>
+        mutate(
+          galones = distancia / 1000  / rendimiento,
+          tarifa = (tarifa_pkm * distancia / 1000) + paradas * 500
+        )
+      
+      list(
+        distancia = distancia,
+        tiempo = tiempo,
+        paradas = paradas,
+        tarifa = by_vehiculo$tarifa,
+        galones = by_vehiculo$galones
+      )
+    })
+    
+    shiny$observeEvent(routes(), {
+      
+      googleway::google_map_update(ns("map")) |>
+        googleway::clear_polylines() |>
+        googleway::clear_markers() |>
+        googleway::add_markers(data = selected_places()) |>
+        googleway::add_polylines(
+          data = dplyr::select(routes(), polyline),
+          polyline = "polyline",
+          stroke_weight = 5
+        )
+    }, ignoreNULL = TRUE)
+    
+    output$distancia <- shiny$renderText({
+      shiny$req(parametros())
+      
+      scales::comma(parametros()$distancia / 1000, accuracy = 0.1)
+    })
+
+    output$tiempo <- shiny$renderText({
+      shiny$req(parametros())
+      as.character(parametros()$tiempo)
+    })
+    
+    output$paradas <- shiny$renderText({
+      shiny$req(parametros())
+      length(input$paradas)
+    })
+
+    output$combustible <- shiny$renderText({
+      shiny$req(parametros())
+      parametros()$galones |>
+        round(1)
+    })
+    
+    output$tarifa <-shiny$renderText({
+      shiny$req(parametros())
+      parametros()$tarifa |>
+        scales::comma(prefix = "RD$ ")
+    })
+    
   })
 }
