@@ -3,7 +3,8 @@ library(dplyr)
 library(purrr)
 
 box::use(
-  app/logic/places
+  app/logic/places,
+  app/logic/indicadores[calcular_indicadores]
 )
 
 map_key <- Sys.getenv("API_KEY")
@@ -12,13 +13,7 @@ centros_comerciales <- readRDS("app/data/centros_comerciales.rds") |>
   mutate(location = map2(lat, lng, ~c(.x, .y))) |>
   as_tibble()
 
-get_route <- function(destinations) {
-    polyline <- google_directions(
-      origin = origin$location,
-      destination = destination$location
-    ) |>
-      direction_polyline()
-}
+vehiculos <- readRDS("app/data/vehiculos.rds")
 
 location_vector_to_df <- function(location) {
   location |>
@@ -51,13 +46,25 @@ rutas <- centros_comerciales |>
   ) |>
   tidyr::unnest(distance_duration)
 
+
+calcular_indicadores(rutas, "Camioneta", paradas = c("Megacentro"))
+
 google_map(key = map_key) %>%
-  add_traffic() |> 
+  #add_traffic() |> 
   add_polylines(
     data = select(rutas, polyline),
     polyline = "polyline",
     stroke_weight = 5
   ) |>
   add_markers(data = centros_comerciales)
+
+
+# get_route <- function(destinations) {
+#     polyline <- google_directions(
+#       origin = origin$location,
+#       destination = destination$location
+#     ) |>
+#       direction_polyline()
+# }
 
 
