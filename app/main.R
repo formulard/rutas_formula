@@ -112,11 +112,12 @@ ui <- function(id) {
 server <- function(id) {
   shiny$moduleServer(id, function(input, output, session) {
     ns <- shiny$NS(id)
+    centros_comerciales <- shiny$reactiveVal(centros_comerciales)
     waiter <- Waiter$new(html = spin_3(), color = waiter::transparent(0.7))
     
 
     shiny$observeEvent(c(input$origen, input$destino), {
-      filtered <- centros_comerciales |>
+      filtered <- centros_comerciales() |>
         dplyr::filter(!name %in% c(input$origen, input$destino))
 
       shinyWidgets::updatePickerInput(
@@ -137,9 +138,9 @@ server <- function(id) {
 
     selected_places <- shiny$eventReactive(input$compute, {
       index_destinos <- which(
-        centros_comerciales$name %in% c(input$origen, input$paradas, input$destino)
+        centros_comerciales()$name %in% c(input$origen, input$paradas, input$destino)
         )
-      centros_comerciales[index_destinos, ]
+      centros_comerciales()[index_destinos, ]
     })
 
     routes <- shiny$eventReactive(selected_places(), {
