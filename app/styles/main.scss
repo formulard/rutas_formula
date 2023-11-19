@@ -1,6 +1,6 @@
 #app-header {
   display: flex;
-  padding: 5px;
+  padding: 10px;
   box-shadow: 0 3px 6px 0 rgba(82, 82, 82, 0.2);
   z-index: 99;
   
@@ -13,4 +13,8 @@
       font-size: 1.8rem;
     }
   }
+}
+
+.value-box-area div {
+  font-size: 22px !important;
 }

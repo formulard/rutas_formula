@@ -10,7 +10,9 @@ box::use(
   googleway[
     google_directions,
     direction_polyline
-  ]
+  ],
+  shinyjs[useShinyjs, hidden, showElement],
+  waiter[Waiter, useWaiter, spin_3, transparent]
 )
 
 map_key <- Sys.getenv("API_KEY")
@@ -38,6 +40,8 @@ ui <- function(id) {
       base_font = bslib$font_google("Poppins"),
       font_scale = 0.9
     ),
+    useShinyjs(),
+    useWaiter(),
     title = header("static/logo.png", "| Coordinador de rutas", icon_width = "200px"),
     sidebar = bslib$sidebar(
       shiny$selectInput(
@@ -67,6 +71,7 @@ ui <- function(id) {
       shiny$actionButton(ns("compute"), "Estimar ruta", class = "danger")
     ),
     bslib$layout_columns(
+      id = "indicadores",
       bslib$value_box(
         title = "Tarifa estimada",
         value = shiny$textOutput(ns("tarifa")),
@@ -94,7 +99,8 @@ ui <- function(id) {
       ),
       fill = FALSE,
       height = "100px"
-    ),
+    ) |>
+      hidden(),
     bslib$card(
       full_screen = TRUE,
       googleway::google_mapOutput(ns("map"), height = "100%")
@@ -106,6 +112,8 @@ ui <- function(id) {
 server <- function(id) {
   shiny$moduleServer(id, function(input, output, session) {
     ns <- shiny$NS(id)
+    waiter <- Waiter$new(html = spin_3(), color = waiter::transparent(0.7))
+    
 
     shiny$observeEvent(c(input$origen, input$destino), {
       filtered <- centros_comerciales |>
@@ -123,7 +131,8 @@ server <- function(id) {
         key = map_key,
         location = c(18.45, -69.95),
         zoom = 10, map_type_control = FALSE
-      )
+      ) |>
+        googleway::add_traffic()
     })
 
     selected_places <- shiny$eventReactive(input$compute, {
@@ -134,6 +143,7 @@ server <- function(id) {
     })
 
     routes <- shiny$eventReactive(selected_places(), {
+      waiter$show()
       selected_places() |>
         dplyr::bind_rows(dplyr::slice(selected_places(), 1)) |>
         mutate(
@@ -166,6 +176,8 @@ server <- function(id) {
     })
 
     shiny$observeEvent(routes(), {
+      showElement(id = "indicadores", asis = TRUE)
+      on.exit(waiter$hide())
 
       googleway::google_map_update(ns("map")) |>
         googleway::clear_polylines() |>
