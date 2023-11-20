@@ -126,14 +126,17 @@ server <- function(id) {
     waiter <- Waiter$new(html = spin_3(), color = waiter::transparent(0.7))
     
 
-    shiny$observeEvent(c(input$origen, input$destino, centros_comerciales()), {
+    shiny$observeEvent(c(input$origen, input$destino), {
       filtered <- centros_comerciales() |>
         dplyr::filter(!name %in% c(input$origen, input$destino))
+      
+      selected <- input$selected
 
       shinyWidgets::updatePickerInput(
         session,
         "paradas",
         choices = filtered$name,
+        selected = selected
       )
     })
     
@@ -141,20 +144,27 @@ server <- function(id) {
       filtered <- centros_comerciales() |>
         dplyr::filter(!name %in% c(input$origen, input$destino))
       
+      origen <- input$origen
+      destino <- input$destino
+      paradas <- input$paradas
+      
       shiny$updateSelectInput(
         inputId = "origen",
-        choices = centros_comerciales()$name
+        choices = centros_comerciales()$name,
+        selected = origen
       )
 
       shiny$updateSelectInput(
         inputId = "destino",
-        choices = centros_comerciales()$name
+        choices = centros_comerciales()$name,
+        selected = destino
       )
       
       shinyWidgets::updatePickerInput(
         session,
         "paradas",
         choices = filtered$name,
+        selected = paradas
       )
     }, ignoreNULL = TRUE)
 

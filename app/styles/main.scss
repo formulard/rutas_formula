@@ -18,3 +18,9 @@
 .value-box-area div {
   font-size: 22px !important;
 }
+
+button[data-id="app-paradas"] {
+  border: 0.5px solid gray;
+  background: white;
+  color: black;
+}
