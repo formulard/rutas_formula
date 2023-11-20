@@ -264,7 +264,7 @@ server <- function(id) {
           agregar_ubicacion$ui(ns("modal")),
           size = "xl",
           easyClose = TRUE,
-          footer = shiny$actionButton(ns("add_confirmation"), "Agregar")
+          footer = shiny$actionButton(ns("add_confirmation"), "Agregar", class = "btn-primary")
         )
       )
 
