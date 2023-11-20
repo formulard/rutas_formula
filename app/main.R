@@ -119,17 +119,16 @@ ui <- function(id) {
 server <- function(id) {
   shiny$moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    
+
     centros_comerciales <- shiny$reactiveVal(centros_comerciales)
     nueva_ubicacion <- shiny$reactiveVal()
-    
+
     waiter <- Waiter$new(html = spin_3(), color = waiter::transparent(0.7))
-    
 
     shiny$observeEvent(c(input$origen, input$destino), {
       filtered <- centros_comerciales() |>
         dplyr::filter(!name %in% c(input$origen, input$destino))
-      
+
       selected <- input$selected
 
       shinyWidgets::updatePickerInput(
@@ -139,15 +138,15 @@ server <- function(id) {
         selected = selected
       )
     })
-    
+
     shiny$observeEvent(centros_comerciales(), {
       filtered <- centros_comerciales() |>
         dplyr::filter(!name %in% c(input$origen, input$destino))
-      
+
       origen <- input$origen
       destino <- input$destino
       paradas <- input$paradas
-      
+
       shiny$updateSelectInput(
         inputId = "origen",
         choices = centros_comerciales()$name,
@@ -159,7 +158,7 @@ server <- function(id) {
         choices = centros_comerciales()$name,
         selected = destino
       )
-      
+
       shinyWidgets::updatePickerInput(
         session,
         "paradas",
@@ -258,8 +257,7 @@ server <- function(id) {
       parametros()$tarifa |>
         scales::comma(prefix = "RD$ ")
     })
-    
-    
+
     shiny$observeEvent(input$agregar, {
       shiny$showModal(
         shiny$modalDialog(
@@ -269,16 +267,16 @@ server <- function(id) {
           footer = shiny$actionButton(ns("add_confirmation"), "Agregar")
         )
       )
-      
+
       shinyjs::runjs("google.maps.event.trigger(map, 'resize')")
       agregar_ubicacion$server("modal", nueva_ubicacion)
     })
-    
+
     shiny$observeEvent(input$add_confirmation, {
       shiny$req(nueva_ubicacion())
-      
+
       old_places <- centros_comerciales()
-      
+
       new_places_list <- dplyr::bind_rows(
         old_places,
         mutate(nueva_ubicacion(), location = list(c(lat, lng)))

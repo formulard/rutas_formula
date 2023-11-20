@@ -32,7 +32,7 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   places <- reactiveVal(centros_comerciales)
-  
+
   output$map <- renderGoogle_map({
     googleway::google_map(
       key = map_key,
@@ -41,17 +41,17 @@ server <- function(input, output, session) {
     ) |>
       googleway::add_traffic()
   })
-  
+
   new_places <- eventReactive(input$search, {
     req(input$query)
     get_place_location(input$query)
   })
-  
+
   selected <- reactive(getReactableState("table", "selected"))
-  
+
   selected_place <- reactive({
     req(new_places())
-    
+
     if (nrow(new_places()) == 1) {
       enable(id = "agregar")
       return(new_places())
@@ -60,16 +60,16 @@ server <- function(input, output, session) {
     enable("agregar")
     new_places()[selected(), ]
   })
-  
+
   output$table <- renderReactable({
     req(nrow(new_places()) > 1)
-    
+
     new_places() |>
       reactable(selection = "single", onClick = "select")
   })
-  
+
   observe(req(selected_place()))
-  
+
   observeEvent(input$agregar, {
     req(selected_place())
     old_places <- places()
@@ -79,12 +79,11 @@ server <- function(input, output, session) {
     )
     places(new_places_list)
   })
-  
+
   observeEvent(new_places(), {
     google_map_update("map") |>
-      clear_markers() |> 
+      clear_markers() |>
       add_markers(data = new_places())
-    
   }, ignoreNULL = TRUE)
 }
 
