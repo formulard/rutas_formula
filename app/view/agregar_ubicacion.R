@@ -9,7 +9,8 @@ box::use(
   app/logic/places[get_place_location]
 )
 
-map_key <- Sys.getenv("API_KEY")
+#map_key <- Sys.getenv("API_KEY")
+map_key <- "AIzaSyBfC5S5hAYVWKbjn-ySyxjBBOXwYk6_lFc"
 
 ui <- function(id) {
   ns <- shiny$NS(id)
@@ -54,7 +55,7 @@ server <- function(id, nueva_ubicacion) {
       shiny$req(input$query)
       spinner$show()
 
-      get_place_location(input$query)
+      get_place_location(input$query, key = map_key)
     })
 
     shiny$observeEvent(new_places(), {

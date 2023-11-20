@@ -15,7 +15,8 @@ box::use(
   waiter[Waiter, useWaiter, spin_3, transparent]
 )
 
-map_key <- Sys.getenv("API_KEY")
+#map_key <- Sys.getenv("API_KEY")
+map_key <- "AIzaSyBfC5S5hAYVWKbjn-ySyxjBBOXwYk6_lFc"
 
 box::use(
   app/logic/app_components[header],
@@ -204,7 +205,7 @@ server <- function(id) {
               origen <- location_vector_to_df(origen)
               destino <- location_vector_to_df(destino)
 
-              places$fetch_distance_and_duration(origen, destino)
+              places$fetch_distance_and_duration(origen, destino, key = map_key)
             }
           )
         ) |>
