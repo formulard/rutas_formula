@@ -21,7 +21,8 @@ box::use(
   app/logic/app_components[header],
   app/logic/places,
   app/logic/places_helpers[location_vector_to_df],
-  app/logic/indicadores[calcular_indicadores]
+  app/logic/indicadores[calcular_indicadores],
+  app/view/agregar_ubicacion
 )
 
 centros_comerciales <- readRDS("app/data/centros_comerciales.rds") |>
@@ -63,12 +64,18 @@ ui <- function(id) {
         multiple = TRUE,
         options = list(`selected-text-format` = "count > 1")
       ),
+      shiny$actionButton(
+        ns("agregar"),
+        "Agregar destino",
+        icon = shiny$icon("location-dot"),
+        class = "modal-opener-btn"
+      ),
       shiny$selectInput(
         ns("vehiculo"),
         "Tipo de vehículo",
         choices = vehiculos$vehiculo
       ),
-      shiny$actionButton(ns("compute"), "Estimar ruta", class = "danger")
+      shiny$actionButton(ns("compute"), "Estimar ruta", class = "btn-primary")
     ),
     bslib$layout_columns(
       id = "indicadores",
@@ -111,12 +118,15 @@ ui <- function(id) {
 #' @export
 server <- function(id) {
   shiny$moduleServer(id, function(input, output, session) {
-    ns <- shiny$NS(id)
+    ns <- session$ns
+    
     centros_comerciales <- shiny$reactiveVal(centros_comerciales)
+    nueva_ubicacion <- shiny$reactiveVal()
+    
     waiter <- Waiter$new(html = spin_3(), color = waiter::transparent(0.7))
     
 
-    shiny$observeEvent(c(input$origen, input$destino), {
+    shiny$observeEvent(c(input$origen, input$destino, centros_comerciales()), {
       filtered <- centros_comerciales() |>
         dplyr::filter(!name %in% c(input$origen, input$destino))
 
@@ -126,6 +136,27 @@ server <- function(id) {
         choices = filtered$name,
       )
     })
+    
+    shiny$observeEvent(centros_comerciales(), {
+      filtered <- centros_comerciales() |>
+        dplyr::filter(!name %in% c(input$origen, input$destino))
+      
+      shiny$updateSelectInput(
+        inputId = "origen",
+        choices = centros_comerciales()$name
+      )
+
+      shiny$updateSelectInput(
+        inputId = "destino",
+        choices = centros_comerciales()$name
+      )
+      
+      shinyWidgets::updatePickerInput(
+        session,
+        "paradas",
+        choices = filtered$name,
+      )
+    }, ignoreNULL = TRUE)
 
     output$map <- googleway::renderGoogle_map({
       googleway::google_map(
@@ -216,6 +247,34 @@ server <- function(id) {
       shiny$req(parametros())
       parametros()$tarifa |>
         scales::comma(prefix = "RD$ ")
+    })
+    
+    
+    shiny$observeEvent(input$agregar, {
+      shiny$showModal(
+        shiny$modalDialog(
+          agregar_ubicacion$ui(ns("modal")),
+          size = "xl",
+          easyClose = TRUE,
+          footer = shiny$actionButton(ns("add_confirmation"), "Agregar")
+        )
+      )
+      
+      shinyjs::runjs("google.maps.event.trigger(map, 'resize')")
+      agregar_ubicacion$server("modal", nueva_ubicacion)
+    })
+    
+    shiny$observeEvent(input$add_confirmation, {
+      shiny$req(nueva_ubicacion())
+      
+      old_places <- centros_comerciales()
+      
+      new_places_list <- dplyr::bind_rows(
+        old_places,
+        mutate(nueva_ubicacion(), location = list(c(lat, lng)))
+      )
+      centros_comerciales(new_places_list)
+      shiny$removeModal()
     })
   })
 }
