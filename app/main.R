@@ -50,7 +50,7 @@ ui <- function(id) {
         ns("origen"),
         labe = "Origen",
         choices = centros_comerciales$name,
-        selected = "Downtown Center"
+        selected = "Terminal Henriquez"
       ),
       shiny$selectInput(
         ns("destino"),

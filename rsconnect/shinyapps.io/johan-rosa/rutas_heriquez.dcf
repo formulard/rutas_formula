@@ -5,7 +5,7 @@ account: johan-rosa
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 10574926
-bundleId: 7946572
+bundleId: 7954812
 url: https://johan-rosa.shinyapps.io/rutas_heriquez/
 version: 1
 asMultiple: FALSE
