@@ -9,8 +9,6 @@ box::use(
 
 centros_comerciales <- readRDS("app/data/centros_comerciales.rds")
 
-"Plaza Colina Centro Villa Mella"
-
 map_key <- Sys.getenv("API_KEY")
 
 ui <- fluidPage(

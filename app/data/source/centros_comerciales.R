@@ -1,6 +1,5 @@
 tibble::tribble(
   ~place_id,              ~name,       ~lat,        ~lng,
-  "ChIJGRvWETJhpY4Rc3NOUlfK92E",  "Terminal Heriquez", 18.4038800, -70.0445100,
   "ChIJoUdErx1ipY4RZOhn3D3Ykv0",   "Down Town Center", 18.4509765, -69.9527804,
   "ChIJ7-Ebog5ipY4RvDafuTLCFSU",   "Bella Vista Mall", 18.4571034, -69.9374813,
   "ChIJ3yQ4KtljpY4RZPn22BSJJUs",      "Plaza Central", 18.4635493, -69.9347652,

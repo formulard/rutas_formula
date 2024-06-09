@@ -2,14 +2,15 @@ box::use(
   shiny,
   leaflet,
   reactable,
-  waiter
+  waiter,
+  dplyr,
 )
 
 box::use(
   app/logic/places[get_place_location]
 )
 
-map_key <- Sys.getenv("API_KEY")
+map_key <- config::get(file = "google_api_config.yml", value = "map_key")
 
 ui <- function(id) {
   ns <- shiny$NS(id)
@@ -29,7 +30,8 @@ ui <- function(id) {
         style = "margin-bottom: 15px;"
       )
     ),
-    leaflet$leafletOutput(ns("map"))
+    leaflet$leafletOutput(ns("map")),
+    reactable$reactableOutput(ns("table"))
   )
 }
 
@@ -54,7 +56,7 @@ server <- function(id, nueva_ubicacion) {
       shiny$req(input$query)
       spinner$show()
 
-      get_place_location(input$query)
+      get_place_location(input$query, key = map_key)
     })
 
     shiny$observeEvent(new_places(), {
@@ -74,7 +76,20 @@ server <- function(id, nueva_ubicacion) {
       shiny$req(nrow(new_places()) > 1)
 
       new_places() |>
-        reactable$reactable(selection = "single", onClick = "select")
+        dplyr$select(name, lat, lng) |>
+        reactable$reactable(
+          selection = "single",
+          onClick = "select",
+          columns = list(
+            name = reactable$colDef(name = "Nombre"),
+            lat = reactable$colDef(format = reactable$colFormat(digits = 2)),
+            lng = reactable$colDef(format = reactable$colFormat(digits = 2))
+          )
+        )
+    })
+    
+    selected <- shiny$reactive({
+      reactable$getReactableState("table", "selected")
     })
 
     selected_place <- shiny$reactive({
@@ -83,9 +98,10 @@ server <- function(id, nueva_ubicacion) {
       if (nrow(new_places()) == 1) {
         return(new_places())
       }
-      shiny$req(selected())
+      
+     shiny$req(selected())
 
-      new_places()[selected(), ]
+     new_places()[selected(), ]
     })
 
     shiny$observe({
