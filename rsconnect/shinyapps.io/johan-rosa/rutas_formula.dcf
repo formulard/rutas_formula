@@ -1,12 +1,12 @@
-name: rutas_heriquez
-title: rutas_heriquez
+name: rutas_formula
+title: rutas_formula
 username: johan-rosa
 account: johan-rosa
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
-appId: 10574926
-bundleId: 7959663
-url: https://johan-rosa.shinyapps.io/rutas_heriquez/
+appId: 11118057
+bundleId:
+url: https://johan-rosa.shinyapps.io/rutas_formula/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE

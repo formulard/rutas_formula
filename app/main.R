@@ -15,8 +15,7 @@ box::use(
   waiter[Waiter, useWaiter, spin_3, transparent]
 )
 
-#map_key <- Sys.getenv("API_KEY")
-map_key <- "AIzaSyBfC5S5hAYVWKbjn-ySyxjBBOXwYk6_lFc"
+map_key <- config::get(file = "google_api_config.yml", value = "map_key")
 
 box::use(
   app/logic/app_components[header],
@@ -36,15 +35,9 @@ vehiculos <- readRDS("app/data/vehiculos.rds")
 ui <- function(id) {
   ns <- shiny$NS(id)
   bslib$page_sidebar(
-    theme = bslib$bs_theme(
-      version = "5",
-      navbar_bg = "#FFF",
-      base_font = bslib$font_google("Poppins"),
-      font_scale = 0.9
-    ),
     useShinyjs(),
     useWaiter(),
-    title = header("static/logo.png", "| Coordinador de rutas", icon_width = "200px"),
+    title = header("static/logo.png", "| Coordinador de rutas", icon_width = "130px"),
     sidebar = bslib$sidebar(
       shiny$selectInput(
         ns("origen"),
@@ -76,15 +69,11 @@ ui <- function(id) {
         "Tipo de vehículo",
         choices = vehiculos$vehiculo
       ),
-      shiny$actionButton(ns("compute"), "Estimar ruta", class = "btn-primary")
+      shiny$actionButton(ns("compute"), "Estimar ruta", class = "btn-primary"),
+      width = 300
     ),
     bslib$layout_columns(
       id = "indicadores",
-      bslib$value_box(
-        title = "Tarifa estimada",
-        value = shiny$textOutput(ns("tarifa")),
-        showcase = bs_icon("cash-stack")
-      ),
       bslib$value_box(
         title = "Distancia",
         value = shiny$textOutput(ns("distancia")),
@@ -234,7 +223,7 @@ server <- function(id) {
 
     output$distancia <- shiny$renderText({
       shiny$req(parametros())
-      scales::comma(parametros()$distancia / 1000, accuracy = 0.1)
+      scales::comma(parametros()$distancia / 1000, accuracy = 0.1, suffix = " Km")
     })
 
     output$tiempo <- shiny$renderText({
@@ -250,7 +239,8 @@ server <- function(id) {
     output$combustible <- shiny$renderText({
       shiny$req(parametros())
       parametros()$galones |>
-        round(1)
+        round(2) |>
+        scales::comma(suffix = " gal")
     })
 
     output$tarifa <- shiny$renderText({

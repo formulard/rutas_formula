@@ -9,8 +9,7 @@ box::use(
 
 centros_comerciales <- readRDS("app/data/centros_comerciales.rds")
 
-#map_key <- Sys.getenv("API_KEY")
-map_key <- "AIzaSyBfC5S5hAYVWKbjn-ySyxjBBOXwYk6_lFc"
+map_key <- Sys.getenv("API_KEY")
 
 ui <- fluidPage(
   useShinyjs(),
